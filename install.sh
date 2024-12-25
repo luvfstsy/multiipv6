@@ -20,6 +20,10 @@ install_3proxy() {
     wget -qO- $URL | bsdtar -xvf-
     cd 3proxy-3proxy-0.8.6
     make -f Makefile.Linux
+    if [ ! -f src/3proxy ]; then
+        echo "Build failed, 3proxy binary not found"
+        exit 1
+    fi
     mkdir -p /usr/local/etc/3proxy/bin
     mkdir -p /usr/local/etc/3proxy/logs
     mkdir -p /usr/local/etc/3proxy/stat
@@ -80,20 +84,23 @@ EOF
 
 gen_ifconfig() {
     cat <<EOF
-$(awk -F "/" '{print "ifconfig enp1s0 inet6 add " $5 "/64"}' ${WORKDATA})
+$(awk -F "/" '{print "ip -6 addr add " $5 "/64 dev enp1s0"}' ${WORKDATA})
 EOF
 }
 
 echo "Installing apps"
 apt-get update -y
-apt-get install -y gcc net-tools bsdtar zip iptables
+apt-get install -y gcc net-tools bsdtar zip iptables build-essential
 
 install_3proxy
 
 echo "Working folder = /home/proxy-installer"
 WORKDIR="/home/proxy-installer"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir -p $WORKDIR && cd $_
+if [ ! -d "$WORKDIR" ]; then
+    mkdir -p $WORKDIR
+fi
+cd $_
 
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
@@ -104,24 +111,7 @@ echo "How many proxies do you want to create? Example: 500"
 read COUNT
 
 FIRST_PORT=10000
-LAST_PORT=$(($FIRST_PORT + $COUNT))
+LAST_PORT=$((FIRST_PORT + COUNT))
 
 gen_data >$WORKDIR/data.txt
-gen_iptables >$WORKDIR/boot_iptables.sh
-gen_ifconfig >$WORKDIR/boot_ifconfig.sh
-chmod +x ${WORKDIR}/boot_*.sh /etc/rc.local
-
-gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
-
-cat >>/etc/rc.local <<EOF
-bash ${WORKDIR}/boot_iptables.sh
-bash ${WORKDIR}/boot_ifconfig.sh
-ulimit -n 10048
-service 3proxy start
-EOF
-
-bash /etc/rc.local
-
-gen_proxy_file_for_user
-
-upload_proxy
+gen_iptables >$WORKDIR/
