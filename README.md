@@ -1,6 +1,6 @@
 # multiipv6
 
-bash <(curl -s "run https://raw.githubusercontent.com/vtopx123/multiipv6/master/install.sh")
+bash <(curl -s "run https://raw.githubusercontent.com/luvfstsy/multiipv6/master/install.sh")
 
 After installation dowload the file proxy.zip
 
